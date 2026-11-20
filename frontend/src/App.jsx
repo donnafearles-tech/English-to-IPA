@@ -5,13 +5,10 @@ import {
   Check,
   Copy,
   Download,
-  Eye,
-  EyeOff,
   Loader2,
   Moon,
   Pause,
   Play,
-  SlidersHorizontal,
   Sparkles,
   Sun,
 } from 'lucide-react'
@@ -25,12 +22,6 @@ const PRESETS = [
     label: 'Clásico',
     text: 'Beauty is no quality in things themselves: It exists merely in the mind which contemplates them.',
   },
-]
-
-const MODEL_OPTIONS = [
-  { value: 'eleven_v4', label: 'eleven_v4' },
-  { value: 'eleven_multilingual_v2', label: 'eleven_multilingual_v2' },
-  { value: 'eleven_turbo_v2_5', label: 'eleven_turbo_v2_5' },
 ]
 
 function formatTime(sec) {
@@ -52,13 +43,6 @@ export default function App() {
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
 
-  const [voiceId, setVoiceId] = useState('P7fAh4p4xVfEzGgihOit')
-  const [modelId, setModelId] = useState('eleven_v4')
-  const [apiKey, setApiKey] = useState('')
-  const [showKey, setShowKey] = useState(false)
-  const [hasEnvKey, setHasEnvKey] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -73,19 +57,6 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setHasEnvKey(Boolean(data.has_env_api_key))
-          if (data.default_voice_id) setVoiceId(data.default_voice_id)
-          if (data.default_model_id) setModelId(data.default_model_id)
-        }
-      })
-      .catch(() => {})
-  }, [])
 
   // Debounced live IPA transcription
   useEffect(() => {
@@ -127,11 +98,6 @@ export default function App() {
       setError('Escribe o pega algún texto en inglés primero.')
       return
     }
-    if (!hasEnvKey && !apiKey.trim()) {
-      setShowSettings(true)
-      setError('Ingresa tu ElevenLabs API Key en Ajustes o configúrala en .env.')
-      return
-    }
 
     setError('')
     setIsGenerating(true)
@@ -140,12 +106,7 @@ export default function App() {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice_id: voiceId.trim() || 'P7fAh4p4xVfEzGgihOit',
-          model_id: modelId.trim() || 'eleven_v4',
-          api_key: apiKey.trim() || null,
-        }),
+        body: JSON.stringify({ text }),
       })
 
       if (!res.ok) {
@@ -195,8 +156,6 @@ export default function App() {
     setCurrentTime(val)
   }
 
-  const keyReady = hasEnvKey || Boolean(apiKey.trim())
-
   return (
     <>
       <div className="ambient-canvas" aria-hidden="true">
@@ -220,15 +179,6 @@ export default function App() {
           <div className="top-actions">
             <button
               type="button"
-              className={`icon-btn ${showSettings ? 'active' : ''}`}
-              onClick={() => setShowSettings((prev) => !prev)}
-              aria-label="Configuración de ElevenLabs"
-              title="Configuración"
-            >
-              <SlidersHorizontal size={18} />
-            </button>
-            <button
-              type="button"
               className="icon-btn"
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
               aria-label="Cambiar tema"
@@ -238,68 +188,6 @@ export default function App() {
             </button>
           </div>
         </header>
-
-        {showSettings && (
-          <section className="glass-card" aria-label="Ajustes de voz y API">
-            <div className="card-header">
-              <span className="section-label">Configuración de ElevenLabs</span>
-            </div>
-            <div className="settings-grid">
-              <div className="field">
-                <label htmlFor="api-key-input">
-                  API Key {hasEnvKey ? '(detectada en .env)' : '(requerida)'}
-                </label>
-                <div className="input-wrap">
-                  <input
-                    id="api-key-input"
-                    className="glass-input"
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={hasEnvKey ? 'Usando ELEVENLABS_API_KEY de .env' : 'xi-...'}
-                    style={{ paddingRight: '2.2rem' }}
-                  />
-                  <button
-                    type="button"
-                    className="input-action"
-                    onClick={() => setShowKey((v) => !v)}
-                    aria-label={showKey ? 'Ocultar API key' : 'Mostrar API key'}
-                  >
-                    {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="field">
-                <label htmlFor="voice-id-input">Voice ID</label>
-                <input
-                  id="voice-id-input"
-                  className="glass-input"
-                  type="text"
-                  value={voiceId}
-                  onChange={(e) => setVoiceId(e.target.value)}
-                  placeholder="P7fAh4p4xVfEzGgihOit"
-                />
-              </div>
-
-              <div className="field">
-                <label htmlFor="model-id-select">Model ID</label>
-                <select
-                  id="model-id-select"
-                  className="glass-input"
-                  value={modelId}
-                  onChange={(e) => setModelId(e.target.value)}
-                >
-                  {MODEL_OPTIONS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="glass-card">
           <div className="card-header">
@@ -331,10 +219,6 @@ export default function App() {
               <span>{wordCount} palabras</span>
               <span>·</span>
               <span>{charCount} caracteres</span>
-              <span>·</span>
-              <span className={`status-dot ${keyReady ? '' : 'warn'}`}>
-                {keyReady ? 'ElevenLabs listo' : 'Falta API Key'}
-              </span>
             </div>
 
             <button
@@ -384,7 +268,7 @@ export default function App() {
         {audioUrl && (
           <section className="glass-card">
             <div className="card-header">
-              <span className="section-label">Audio Generado · {modelId}</span>
+              <span className="section-label">Audio Generado</span>
               <a
                 href={audioUrl}
                 download="output.mp3"
